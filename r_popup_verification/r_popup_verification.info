@@ -1,0 +1,7 @@
+name = "Redactive Popup Verification"
+description = "A module to verify user input"
+core = "7.x"
+package = CP
+
+configure = admin/config/r_popup_verification_admin
+dependencies[] = colorbox

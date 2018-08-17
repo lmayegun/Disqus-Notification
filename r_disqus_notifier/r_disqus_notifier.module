@@ -1,0 +1,207 @@
+<?php 
+
+function get_thread( $thread ){
+	$api_key = variable_get('notifier_api_key', '');
+	$forum = variable_get('forum', ''); 
+
+	$threads 	= drupal_http_request("https://disqus.com/api/3.0/forums/listThreads.json?api_key=". $api_key ."&forum=". $forum ."&thread=" . $thread );
+	$threadsJson= json_decode($threads->data);
+
+	return $threadsJson->response[0];
+}
+function r_disqus_notifier_init(){
+	$api_key = variable_get('notifier_api_key', '');
+	$forum = variable_get('forum', ''); 
+
+	$forum 		= drupal_http_request("https://disqus.com/api/3.0/forums/listPosts.json?api_key=". $api_key ."&forum=". $forum ."&limit=4");
+  	$obj 		= json_decode($forum->data);
+
+	watchdog('Redactive Disqus','Comment Email Notifier'); 
+
+	$to = variable_get('new_comments_notify_recipients', 'lmayegun@gmail.com'); 
+	$thread = get_thread( $obj->response[0]->thread );
+
+	$lastCreatedCommentTime = variable_get('lastCreatedCommentTime');
+	if( $lastCreatedCommentTime != $obj->response[0]->createdAt ){
+		variable_set( 'lastCreatedCommentTime', $obj->response[0]->createdAt ); 
+		
+		get_thread( $obj->response[0]->thread );
+
+		$lastCreatedAt = $obj->response[0]->createdAt;
+		$body =  "<div>" . variable_get( 'notifier_message', '') ."</div>";
+		$body .= "<div> Created on : ". $obj->response[0]->createdAt . "</div>";
+		$body .= "<div> Message : " . $obj->response[0]->message ." </div>";  
+		$body .= "<div> Title : ". $thread->clean_title . "</div>";
+		$body .= "<div> Link : " . $thread->link ." </div>";
+
+
+		$params = array(
+	  		'subject' => 'New Comments ' . $thread->clean_title  ,
+	  		'body' => $body,
+		);
+
+		// Send out the e-mail.
+		drupal_mail('r_disqus_notifier', 'my_module_mail_example', $to, language_default(), $params);
+	}
+}
+/**
+ * Implemenents hook_cron().
+ */
+function r_disqus_notifier_cron(){
+	$api_key = variable_get('notifier_api_key', '');
+	$forum = variable_get('forum', ''); 
+
+	$forum 		= drupal_http_request("https://disqus.com/api/3.0/forums/listPosts.json?api_key=". $api_key ."&forum=". $forum ."&limit=4");
+  	$obj 		= json_decode($forum->data);
+
+	watchdog('Redactive Disqus','Comment Email Notifier'); 
+
+	$to = variable_get('new_comments_notify_recipients', 'lmayegun@gmail.com'); 
+	$thread = get_thread( $obj->response[0]->thread );
+
+	$lastCreatedCommentTime = variable_get('lastCreatedCommentTime');
+	if( $lastCreatedCommentTime != $obj->response[0]->createdAt ){
+		variable_set( 'lastCreatedCommentTime', $obj->response[0]->createdAt ); 
+		
+		get_thread( $obj->response[0]->thread );
+
+		$lastCreatedAt = $obj->response[0]->createdAt;
+		$body =  "<div>" . variable_get( 'notifier_message', '') ."</div>";
+		$body .= "<div> Created on : ". $obj->response[0]->createdAt . "</div>";
+		$body .= "<div> Message : " . $obj->response[0]->message ." </div>";  
+		$body .= "<div> Title : ". $thread->clean_title . "</div>";
+		$body .= "<div> Link : " . $thread->link ." </div>";
+
+
+		$params = array(
+	  		'subject' => variable_get( 'notifier_title','') ,
+	  		'body' => $body,
+		);
+
+		// Send out the e-mail.
+		drupal_mail('r_disqus_notifier', 'my_module_mail_example', $to, language_default(), $params);
+	}
+}
+
+/**
+ * Implemenents hook_mail().
+ */
+function r_disqus_notifier_mail($key, &$message, $params){
+	global $lastCreatedAt;
+	drupal_set_message(t('Message from r_disqus_notifier_mail %string', array('%string' => $lastCreatedAt)) ); 
+  	// Set the mail content type to html to send an html e-mail (optional).
+  	 $headers = array(
+	    'MIME-Version' => '1.0',
+	    'Content-Type' => 'text/html; charset=UTF-8; format=flowed',
+	    'Content-Transfer-Encoding' => '8Bit',
+	    'X-Mailer' => 'Drupal'
+	  );
+	  foreach ($headers as $key => $value) {
+	    $message['headers'][$key] = $value;
+	  }
+  	// Grab the subject and body from params and add it to the message.
+  	$message['subject'] = $params['subject'];
+  	$message['body'][] = $params['body']; 
+
+  	switch ($key) {
+    	case "my_module_mail_example":
+      	// Make other changes here if desired...
+      	break;
+  	}
+}
+
+/**
+ * Implemenents hook_form_ID_alter().
+ */
+function r_disqus_notifier_form_disqus_admin_settings_alter( &$form, &$form_state, $form_id ){
+	$form['notifier'] = array(
+		'#type' => 'fieldset',
+	    '#title' => t('Notifier'),
+	    '#group' => 'settings',
+	);
+
+	$form['notifier']['recipients'] = array(
+		'#type' => 'textarea',
+	    '#title' => t('Reciepients '),
+	    '#description' => t('List of all recipients for new comments notification. Make sure each recipients value are comma seperated'),
+	    '#default_value' => variable_get('new_comments_notify_recipients', ''),
+	);
+
+	$form['notifier']['notifier_api_key'] = array(
+		'#type' => 'textfield',
+    	'#title' => t('API key'),
+    	'#default_value' => variable_get('notifier_api_key', ''),
+	); 
+
+	$form['notifier']['forum'] = array(
+		'#type' => 'textfield',
+    	'#title' => t('Forum'),
+    	'#default_value' => variable_get('forum', ''),
+	);
+
+	$form['notifier']['notifier_title'] = array(
+		'#type' => 'textfield',
+    	'#title' => t('Message Title'),
+    	'#default_value' => variable_get('notifier_title', ''),
+	);
+
+	$form['notifier']['notifier_message'] = array(
+		'#type' => 'textarea',
+    	'#title' => t('Message'),
+    	'#default_value' => variable_get('notifier_message', ''),
+	);
+
+	$form['#submit'][] = 'r_disqus_notifier_form_disqus_admin_settings_alter_submit';
+}
+
+/**
+ * Implemenents hook_form_ID_alter_submit().
+ */
+function r_disqus_notifier_form_disqus_admin_settings_alter_submit( $form, &$form_state ){
+	if( isset( $form_state['values']['recipients'] )){
+		variable_set( 'new_comments_notify_recipients', $form_state['values']['recipients']); 
+	}
+
+	if( isset( $form_state['values']['notifier_api_key'] )){
+		variable_set( 'notifier_api_key', $form_state['values']['notifier_api_key']); 
+	}
+
+	if( isset( $form_state['values']['forum'] )){
+		variable_set( 'forum', $form_state['values']['forum']); 
+	}
+
+	if( isset( $form_state['values']['notifier_title'] )){
+		variable_set( 'notifier_title', $form_state['values']['notifier_title']); 
+	}
+
+	if( isset( $form_state['values']['notifier_message'] )){
+		variable_set( 'notifier_message', $form_state['values']['notifier_message']); 
+	}
+}
+
+/**
+ * Implemenents hook_menu().
+ */
+function r_disqus_notifier_menu(){
+	$menus = array();
+
+	$menus['admin/config/system/pf-disqus-notifier'] = array(
+		'title' 			=> 'Disqus Notifier', 
+		'description' 		=> 'Administration page.', 
+		'page callback' 	=> array('welcome_page'), 
+		'access arguments' 	=> array('administer r_disqus_notifier'),
+		'file'				=> 'r_disqus_notifier.admin.inc',
+	);
+	return $menus;
+}
+
+/**
+ * hook_permission(). 
+ */ 
+function r_disqus_notifier_permission(){
+	return array(
+		'administer r_disqus_notifier' => array(
+			'title' => t('Administer PF Disqus Notifier'),
+		), 
+	);
+}

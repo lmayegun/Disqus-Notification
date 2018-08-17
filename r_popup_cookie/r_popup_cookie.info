@@ -1,0 +1,7 @@
+name = "Redactive Popup Cookie"
+description = "A module use for popup with cookie"
+core = "7.x"
+package = Redactive Custom Modules
+
+configure = admin/config/r_popup_cookie_admin
+dependencies[] = colorbox

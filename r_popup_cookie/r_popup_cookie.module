@@ -1,0 +1,97 @@
+<?php 
+
+ module_load_include('inc', 'r_popup_cookie', 'r_verification_login.form');
+ module_load_include('inc', 'r_popup_cookie', 'r_popup_cookie.function');
+ 
+ /**
+  * Implements hook_menu().
+  */
+ function r_popup_cookie_menu(){
+	$items = array(); 
+
+	$items['admin/config/r_popup_cookie_admin'] = array(
+		'title' 			      => 'Redactive Cookie Popup', 
+		'description'		    => 'Redactive Cookie Configuration Page', 
+		'page callback'     => 'drupal_get_form', 
+		'page arguments'    => array('r_popup_cookie_admin_form'),
+		'access arguments'  => array('administer content types'),
+		'file'				      => 'r_popup_cookie_admin.form.inc',
+	);
+
+	return $items;
+ }
+
+ /**
+ * Implements hook_page_alter().
+ */
+function r_popup_cookie_page_alter(&$page) { 
+  if( current_path() == 'home' ){
+    drupal_add_js(drupal_get_path('module', 'r_popup_cookie') . '/js/r_popup_cookie.js');
+    drupal_add_css(drupal_get_path('module', 'r_popup_cookie') . '/css/r_popup_cookie.css');
+      $return       = check_plain(request_uri());
+      $emediate_code= variable_get('emediate_code'); 
+      $bkg_opacity  = variable_get('background_opacity');
+      $vars = array(
+        'emediate_code' => $emediate_code,
+        'bkg_opacity'   => $bkg_opacity ,
+        'url_login'   => url('subscribe/login', array(
+          'query' => array('destination' => $return ) 
+          )
+        ),
+      );
+      $page['content']['verification'] = array(
+        '#markup' => theme('r_cookie_popup_content', $vars), 
+        '#weight' => 100
+      );
+    }
+  // Display gated content if page being view is magazine and user are not authenticated
+  if( user_is_logged_in() ){
+
+  }
+}
+
+ /**
+  *Implements hook_theme().
+  */
+ function r_popup_cookie_theme( $existing, $type, $theme, $path ){
+ 	return array(
+ 		'r_cookie_popup_content' => array(
+ 			'path'		=> $path . '/templates',
+ 			'template'	=> 'r-popup-cookie-form',
+ 			'variables' => array(
+ 				'msg_title'	        => NULL,
+        'msg_before'        => NULL,
+ 				'msg_body' 	        => NULL,
+ 				'url_login'         => NULL,
+        'emediate_code'     => NULL, 
+ 			),
+ 		),
+ 	);
+ }
+
+ /**
+  *Implements hook_init().
+  */
+ function r_popup_cookie_init(){
+ 	global $base_path;
+  global $base_url; 
+
+ 	$js_variables = array(
+		'verifyReg'   => variable_get( 'regex_pattern' , 0 ),
+    'baseUrl'     => $base_url,
+    'basePath'    => $base_path,
+    'year'        => variable_get('Year'),
+    'month'       => variable_get('Month'),  
+    'date'        => variable_get('Date'), 
+    'hour'        => variable_get('Hour'), 
+    'minutes'     => variable_get('Minutes'),
+    'cookie_timer'=> variable_get('cookie_timer'),
+    'cookie_key'  => variable_get('cookie_key'),
+    //'nodeId'      => _get_node_id(),
+    'currentPath' => current_path(),
+	);
+
+ 	drupal_add_js(  array('r_popup_js_var' => $js_variables ), 'setting');
+ }
+
+

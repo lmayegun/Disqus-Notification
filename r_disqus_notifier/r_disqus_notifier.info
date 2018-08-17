@@ -1,0 +1,11 @@
+name = Redactive Disqus Post Notifier
+description = "Module to notify user if new post is include in disqus"
+package = Redactive
+core = 7.x
+
+configure = admin/config/system/disqus-notifier
+dependencies[] = ctools
+dependencies[] = disqus
+
+scripts[] = js/notifier_post.js
+

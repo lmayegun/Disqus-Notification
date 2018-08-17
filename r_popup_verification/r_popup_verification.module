@@ -1,0 +1,121 @@
+<?php 
+
+ module_load_include('inc', 'r_popup_verification', 'r_verification_login.form');
+ module_load_include('inc', 'r_popup_verification', 'r_popup_verification.function');
+ 
+ /**
+  * Implements hook_menu().
+  */
+ function r_popup_verification_menu(){
+	$items = array(); 
+
+	$items['admin/config/r_popup_verification_admin'] = array(
+		'title' 			      => 'Redactive Verification', 
+		'description'		    => 'Redactive Verification Configuration Page', 
+		'page callback'     => 'drupal_get_form', 
+		'page arguments'    => array('r_popup_verification_admin_form'),
+		'access arguments'  => array('administer content types'),
+		'file'				      => 'r_popup_verification_admin.form.inc',
+	);
+
+	return $items;
+ }
+
+ /**
+  *Implements preprocess_node().
+  */
+ function r_popup_verification_preprocess_node( &$variables ){
+   if (_check_private(_get_node_id())){
+   	  if ( variable_get('api_msg_popup', 0) ) {
+        drupal_add_js(drupal_get_path('module', 'r_popup_verification') . '/js/verification_popup.js');
+      }
+
+      $return     = check_plain(request_uri());
+      $title      = variable_get('api_msg_title');
+      $msg_before = variable_get('api_msg_before');
+      $msg_body   = variable_get('api_msg_body');
+   		$vars = array(
+   			'msg_title' 	=> $title, 
+        'msg_before'  => $msg_before['value'],
+   			'msg_body'		=> $msg_body['value'],
+   			'url_login'		=> url('subscribe/login', array(
+   				'query'	=> array('destination' => $return ) 
+   			  )
+   			),
+   		);
+   		$variables['content']['verification'] = array(
+   			'#markup' => theme('r_verification_form_content', $vars), 
+   			'#weight' => 100
+   		); 
+   }  	
+ }
+
+ /**
+ * Implements hook_page_alter().
+ */
+function r_popup_verification_page_alter(&$page) { 
+  // Display gated content if page being view is magazine and user are not authenticated
+  if( user_is_logged_in() ){
+
+  }
+  elseif( current_path() == 'archive' || current_path() == 'ARCHIVE' ){
+    if ( variable_get('api_msg_popup', 0) ){
+       drupal_add_js(drupal_get_path('module', 'r_popup_verification') . '/js/verification_popup.js');
+    }
+      $return     = check_plain(request_uri());
+      $title      = variable_get('api_msg_title');
+      $msg_before = variable_get('api_msg_before');
+      $msg_body   = variable_get('api_msg_body');
+      $vars = array(
+        'msg_title'   => $title, 
+        'msg_before'  => $msg_before['value'],
+        'msg_body'    => $msg_body['value'],
+        'url_login'   => url('subscribe/login', array(
+          'query' => array('destination' => $return ) 
+          )
+        ),
+      );
+      $page['content']['verification'] = array(
+        '#markup' => theme('r_verification_form_content', $vars), 
+        '#weight' => 100
+      ); 
+  }
+}
+
+ /**
+  *Implements hook_theme().
+  */
+ function r_popup_verification_theme( $existing, $type, $theme, $path ){
+ 	return array(
+ 		'r_verification_form_content' => array(
+ 			'path'		=> $path . '/templates',
+ 			'template'	=> 'r-verification-form',
+ 			'variables' => array(
+ 				'msg_title'	=> NULL,
+        'msg_before'=> NULL,
+ 				'msg_body' 	=> NULL,
+ 				'url_login' => NULL,
+ 			),
+ 		),
+ 	);
+ }
+
+ /**
+  *Implements hook_init().
+  */
+ function r_popup_verification_init(){
+ 	global $base_path;
+  global $base_url; 
+
+ 	$js_variables = array(
+		'verifyReg'   => variable_get( 'regex_pattern' , 0 ),
+    'baseUrl'     => $base_url,
+    'basePath'    => $base_path,
+    'nodeId'      => _get_node_id(),
+    'currentPath' => current_path(),
+	);
+
+ 	drupal_add_js(  array('r_popup_js_var' => $js_variables ), 'setting');
+ }
+
+

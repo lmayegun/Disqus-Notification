@@ -1,0 +1,31 @@
+<?php 
+
+
+/** 
+ * Implements hook_install. 
+ */
+
+ function r_disqus_notifier_install(){
+ 	  watchdog( 'Redactive Disqus', 'Redactive Disqus Notifier Installed'); 
+ }
+
+ /** 
+  * Implemenents hook_uninstall(). 
+  */ 
+ function r_disqus_notifier_uninstall(){
+ 	  watchdog( 'Redactive Disqus', 'Redactive Disqus Notifier Uninstalled'); 
+ }
+
+ /**
+  * Implememts hook_enable(). 
+  */ 
+ function r_disqus_notifier_enable(){
+ 	  watchdog( 'Redactive Disqus', 'Redactive Disqus Notifier Enabled'); 
+ }
+
+ /**
+  * Implememnts hook_disable(). 
+  */
+ function r_disqus_notifier_disbale(){	
+ 	  watchdog( 'Redactive Disqus', 'Redactive Disqus Notifier Disabled'); 
+ }
